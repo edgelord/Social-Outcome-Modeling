@@ -3,9 +3,12 @@ from header import schema
 
 import numpy as np
 import pandas as pd
+import pydot
 
+from sklearn.externals.six import StringIO
 from sklearn.linear_model import LinearRegression, Lasso
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.tree import DecisionTreeRegressor, export_graphviz
 
 
 def load_data(filename='../rsrc/data.csv'):
@@ -55,12 +58,13 @@ def train_model(feats, x, y, model, split_ratio=.8):
     err = model.predict(x[split:]) - y[split:]
     sq_err = err ** 2
     print 'Average Error: ', np.average(np.abs(err))
-    print 'Avg. Rel. Error: ', np.average(err/y[split:])
-    imp = important_features(feats, model.coef_)
-    print 'Associated features: '
-    show(imp[:10])
-    print 'Disassociated features: '
-    show(imp[-10:][::-1])
+    print 'Avg. Rel. Error: ', np.average(err)/np.average(y[split:])
+    if model is lin_reg or model is lasso:
+        imp = important_features(feats, model.coef_)
+        print 'Associated features: '
+        show(imp[:10])
+        print 'Disassociated features: '
+        show(imp[-10:][::-1])
     return model
 
 
@@ -74,7 +78,22 @@ def lasso(feats, x, y, alpha=.0001, iters=3000):
     m = train_model(feats, x, y, m)
 
 
-def experiment(df, iv):
-    feats, qx = quadratic_features(df.drop(iv,1))
+def regtree(feats, x, y):
+    m = DecisionTreeRegressor(max_leaf_nodes=10)
+    m = train_model(feats, x, y, m)
+    return m
+
+def experiment(df, iv, model=lasso):
+    feats, qx = quadratic_features(df.drop(iv, 1))
     y = df[iv].values
-    lasso(feats,qx,y)
+    model(feats, qx, y)
+
+
+def show_tree(clf, feature_names, file_name):
+    dot_data = StringIO() 
+    export_graphviz(clf, out_file=dot_data,
+                    feature_names=feature_names) 
+    graph = pydot.graph_from_dot_data(dot_data.getvalue(),) 
+    graph.write_pdf(file_name)
+
+
