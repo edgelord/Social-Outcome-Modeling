@@ -71,10 +71,14 @@ def train_model(feats, x, y, model, split_ratio=.8):
     split = len(y) * split_ratio
     model.fit(x[:split], y[:split])
 
-    err = model.predict(x[split:]) - y[split:]
-    sq_err = err ** 2
-    print 'Average Error: ', np.average(np.abs(err))
-    print 'Avg. Rel. Error: ', np.average(np.abs(err)) / np.average(y[split:])
+    pred = model.predict(x[split:])
+    # sq_err = err ** 2
+    # print 'Average Error: ', np.average(np.abs(err))
+    # print 'Avg. Rel. Error: ', np.average(np.abs(err)) / np.average(y[split:])
+    print 'Mean Absolute Error'
+    print mean_absolute_error(pred, y[split:])
+    print 'RMSE'
+    print mean_squared_error(pred, y[split:])**.5
     if type(model) in [Lasso, LinearRegression]:
         show_linear_results(feats, model)
     return model
@@ -182,7 +186,7 @@ class NNLR:
         self.active=defaultdict(int)
     def nn_lin(self, testX, neighbors):
         l = DecisionTreeRegressor()
-        # return np.mean(self.Y[neighbors])
+        return np.mean(self.Y[neighbors])
         l.fit(self.X[neighbors], self.Y[neighbors])
         # for idx in np.where(l.coef_)[0]:
             # self.active[idx]+=1
@@ -223,3 +227,48 @@ def tst(X, Y, k=3, rad=4, mode='k'):
     print mean_absolute_error(tstY, pred)
     # print zip(pred, tstY)[:5]
     print nnlr.active
+def tst2(X, Y, k=3, rad=4, mode='k'):
+    rmse = []
+    ame = []
+    for k in range(1,20):
+        trX = X[:-1200]
+        trY = Y[:-1200]
+        tstX = X[-400:]
+        tstY = Y[-400:]
+
+        nnlr = NNLR(k, rad, mode)
+
+        nnlr.fit(trX, trY)
+
+        pred = nnlr.predict(tstX)
+        ms= mean_squared_error(tstY, pred)**.5
+        m= mean_absolute_error(tstY, pred)
+        # print zip(pred, tstY)[:5]
+        print nnlr.active
+        ame.append(m)
+        rmse.append(ms)
+    plt.title('AME vs k')
+    plt.xlabel('k')
+    plt.ylabel('Holdout Average Mean Error')
+    plt.plot(ame)
+    plt.show()
+    plt.title('RMSE vs k')
+    plt.xlabel('k')
+    plt.ylabel('Holdout RMSE')
+    plt.plot(rmse)
+    plt.show()
+import matplotlib.pyplot as plt
+cm = plt.cm.get_cmap('RdYlBu')
+def cscatter(x,y,z, xl, yl):
+    # z = df.ViolentCrimesPerPop
+    # xz = df.racepctblack*df.racePctHisp
+    # xz=df.racePctWhite*df.racepctblack
+    # xy = df.PctPopUnderPov
+    sc = plt.scatter(x, y, c=z,  cmap=coolwarm)
+    plt.xlim(0,1.02)
+    plt.ylim(-.01,1.01)
+    # sc = plt.scatter(xy, xz, color=colors)
+    plt.colorbar(sc,label='Violent Crime Rate',shrink=.5)
+    plt.xlabel(xl)
+    plt.ylabel(yl)
+    # plt.show()
